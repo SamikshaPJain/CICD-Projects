@@ -1,37 +1,36 @@
-import { Outlet, useLocation, useNavigation } from "react-router-dom";
-import Box from "@mui/material/Box";
-
-import DetailModal from "src/components/DetailModal";
-import VideoPortalContainer from "src/components/VideoPortalContainer";
-import DetailModalProvider from "src/providers/DetailModalProvider";
-import PortalProvider from "src/providers/PortalProvider";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 import { MAIN_PATH } from "src/constant";
-import { Footer, MainHeader } from "src/components/layouts";
-import MainLoadingScreen from "src/components/MainLoadingScreen";
 
-export default function MainLayout() {
-  const location = useLocation();
-  const navigation = useNavigation();
-  // console.log("Nav Stat: ", navigation.state);
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        minHeight: "100vh",
-        bgcolor: "background.default",
-      }}
-    >
-      <MainHeader />
-      {navigation.state !== "idle" && <MainLoadingScreen />}
-      <DetailModalProvider>
-        <DetailModal />
-        <PortalProvider>
-          {/* <MainLoadingScreen /> */}
-          <Outlet />
-          <VideoPortalContainer />
-        </PortalProvider>
-      </DetailModalProvider>
-      {location.pathname !== `/${MAIN_PATH.watch}` && <Footer />}
-    </Box>
-  );
-}
+import MainLayout from "src/layouts/MainLayout";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <MainLayout />,
+    children: [
+      {
+        path: MAIN_PATH.root,
+        element: <Navigate to={`/${MAIN_PATH.browse}`} />,
+      },
+      {
+        path: MAIN_PATH.browse,
+        lazy: () => import("src/pages/HomePage"),
+      },
+      {
+        path: MAIN_PATH.genreExplore,
+        children: [
+          {
+            path: ":genreId",
+            lazy: () => import("src/pages/GenreExplore"),
+          },
+        ],
+      },
+      {
+        path: MAIN_PATH.watch,
+        lazy: () => import("src/pages/WatchPage"),
+      },
+    ],
+  },
+]);
+
+export default router;
