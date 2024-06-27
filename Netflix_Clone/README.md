@@ -1,3 +1,5 @@
+# **Netflix Clone on Kubernetes using Jenkins**
+
 <div align="center">
   <img src="./public/assets/DevSecOps.png" alt="Logo" width="100%" height="100%">
 
@@ -14,45 +16,37 @@
   <p align="center">Home Page</p>
 </div>
 
-# **Youtube Video for step by step Demonstration!**
-[![Video Tutorial](https://img.youtube.com/vi/g8X5AoqCJHc/0.jpg)](https://youtu.be/g8X5AoqCJHc)
-
-
-## Susbcribe:
-[https://www.youtube.com/@cloudchamp?
-](https://www.youtube.com/@cloudchamp?sub_confirmation=1)
-
-# Deploy Netflix Clone on Cloud using Jenkins - DevSecOps Project!
-
 ### **Phase 1: Initial Setup and Deployment**
 
 **Step 1: Launch EC2 (Ubuntu 22.04):**
 
-- Provision an EC2 instance on AWS with Ubuntu 22.04.
+- Provision a t2.large EC2 instance on AWS with Ubuntu 22.04 and a storage of 25GiB.
+- Attach an Elastic IP to this instance. 
+- Add Security Group inbound rules for SSH(22), HTTP(80), HTTPS(443), app port(8081), jenkins(8080), sonarqube(9000)
 - Connect to the instance using SSH.
 
 **Step 2: Clone the Code:**
 
-- Update all the packages and then clone the code.
+- Update all the packages and then clone the code after connecting to the instance.
+ ```bash
+ sudo apt update -y
+ ```
 - Clone your application's code repository onto the EC2 instance:
-    
-    ```bash
-    git clone https://github.com/N4si/DevSecOps-Project.git
-    ```
-    
+ ```bash
+git clone https://github.com/SamikshaPJain/CICD-Projects.git
+```  
 
 **Step 3: Install Docker and Run the App Using a Container:**
 
 - Set up Docker on the EC2 instance:
     
-    ```bash
-    
+```bash
     sudo apt-get update
     sudo apt-get install docker.io -y
     sudo usermod -aG docker $USER  # Replace with your system's username, e.g., 'ubuntu'
     newgrp docker
     sudo chmod 777 /var/run/docker.sock
-    ```
+ ```
     
 - Build and run your application using Docker containers:
     
@@ -77,10 +71,12 @@ It will show an error cause you need API key
 - Provide the required basic details and click "Submit."
 - You will receive your TMDB API key.
 
-Now recreate the Docker image with your api key:
+Now recreate the Docker image with your api key and run it:
 ```
 docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
+docker run -d -p 8081:80 netflix
 ```
+Can access it on http://<ec2-elastic-ip>:8081
 
 **Phase 2: Security**
 
@@ -91,11 +87,10 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
         ```
         docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
         ```
-        
-        
+
         To access: 
         
-        publicIP:9000 (by default username & password is admin)
+        http://<ec2-elastic-ip>:9000 (by default username & password is admin)
         
         To install Trivy:
         ```
@@ -106,12 +101,11 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
         sudo apt-get install trivy        
         ```
         
-        to scan image using trivy
+        To scan image using trivy
         ```
         trivy image <imageid>
         ```
-        
-        
+       
 2. **Integrate SonarQube and Configure:**
     - Integrate SonarQube with your CI/CD pipeline.
     - Configure SonarQube to analyze code for quality and security issues.
@@ -120,9 +114,9 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
 
 1. **Install Jenkins for Automation:**
     - Install Jenkins on the EC2 instance to automate deployment:
-    Install Java
     
     ```bash
+    #Install Java
     sudo apt update
     sudo apt install fontconfig openjdk-17-jre
     java -version
@@ -144,11 +138,11 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
     
     - Access Jenkins in a web browser using the public IP of your EC2 instance.
         
-        publicIp:8080
+      http://<ec2-elastic-ip>:8080
         
 2. **Install Necessary Plugins in Jenkins:**
 
-Goto Manage Jenkins →Plugins → Available Plugins →
+Go to Manage Jenkins → Plugins → Available Plugins →
 
 Install below plugins
 
@@ -156,36 +150,37 @@ Install below plugins
 
 2 SonarQube Scanner (Install without restart)
 
-3 NodeJs Plugin (Install Without restart)
+3 NodeJs Plugin (Install without restart)
 
 4 Email Extension Plugin
 
 ### **Configure Java and Nodejs in Global Tool Configuration**
 
-Goto Manage Jenkins → Tools → Install JDK(17) and NodeJs(16)→ Click on Apply and Save
+Go to Manage Jenkins → Tools → Install JDK(17.0.8+1) [adoptium.net] and NodeJs(16.2.0)→ Click on Apply and Save
 
+Name them as jdk17 and node16 respectively as they are used in the CI/CD pipeline.
 
 ### SonarQube
 
-Create the token
+Administration → Security → Users → Create the token
 
-Goto Jenkins Dashboard → Manage Jenkins → Credentials → Add Secret Text. It should look like this
+Go to Jenkins Dashboard → Manage Jenkins → Credentials → Add Secret Text. 
 
-After adding sonar token
-
-Click on Apply and Save
+After adding sonar token click on Apply and Save.
 
 **The Configure System option** is used in Jenkins to configure different server
+Go to Manage Jenkins → System → Search for SonarQube → Add
+Name = sonar-server, Server URL = http://<ec2-elastic-ip>:9000, Authentication = select the token created earlier.
 
 **Global Tool Configuration** is used to configure different tools that we install using Plugins
-
-We will install a sonar scanner in the tools.
-
-Create a Jenkins webhook
+Go to Manage Jenkins → Tools → Search for SonarQube Scanner → Install
+Give name as sonar-scanner.
 
 1. **Configure CI/CD Pipeline in Jenkins:**
 - Create a CI/CD pipeline in Jenkins to automate your application deployment.
+  New Item → Pipeline, Name = netflix
 
+Paste the below Pipeline Script: 
 ```groovy
 pipeline {
     agent any
@@ -230,8 +225,11 @@ pipeline {
     }
 }
 ```
+Run the pipeline by clicking on Build Now.
 
-Certainly, here are the instructions without step numbers:
+In SonarQube:
+Projects → Manually → Name = Netflix → Set Up → Locally → Generate Token
+This is the token used in the pipeline.
 
 **Install Dependency-Check and Docker Tools in Jenkins**
 
@@ -247,7 +245,7 @@ Certainly, here are the instructions without step numbers:
 - After installing the Dependency-Check plugin, you need to configure the tool.
 - Go to "Dashboard" → "Manage Jenkins" → "Global Tool Configuration."
 - Find the section for "OWASP Dependency-Check."
-- Add the tool's name, e.g., "DP-Check."
+- Add the tool's name, "DP-Check."
 - Save your settings.
 
 **Install Docker Tools and Docker Plugins:**
@@ -273,8 +271,15 @@ Certainly, here are the instructions without step numbers:
   - Enter your DockerHub credentials (Username and Password) and give the credentials an ID (e.g., "docker").
   - Click "OK" to save your DockerHub credentials.
 
-Now, you have installed the Dependency-Check plugin, configured the tool, and added Docker-related plugins along with your DockerHub credentials in Jenkins. You can now proceed with configuring your Jenkins pipeline to include these tools and credentials in your CI/CD process.
+  **Configure Dependency-Check Tool:**
 
+- After installing the Dependency-Check plugin, you need to configure the tool.
+- Go to "Dashboard" → "Manage Jenkins" → "Global Tool Configuration."
+- Find the section for "Docker Installations."
+- Add the tool's name, "docker."
+- Save your settings.
+
+Stop and delete the docker container running already and update the pipeline script: (Paste the TMDB API key)
 ```groovy
 
 pipeline{
@@ -346,31 +351,38 @@ pipeline{
         }
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d --name netflix -p 8081:80 nasi101/netflix:latest'
+                sh 'docker run -d -p 8081:80 nasi101/netflix:latest'
             }
         }
     }
 }
-
-
-If you get docker login failed errorr
-
-sudo su
-sudo usermod -aG docker jenkins
-sudo systemctl restart jenkins
-
-
 ```
 
-**Phase 4: Monitoring**
+Click on Build Now.
 
-1. **Install Prometheus and Grafana:**
+If you get docker login failed error, run the following commands on the instance:
+    ```bash
+    sudo su
+    sudo usermod -aG docker jenkins
+    sudo systemctl restart jenkins
+    ```
+
+**Phase 4: Monitoring**
+1. **Launch EC2 (Ubuntu 22.04):**
+  - Create another t2.medium instance that will be used for monitoring with a storage of 20GiB.
+  - Attach an Elastic IP to this instance.
+  - Add Security Group inbound rules for SSH(22), HTTP(80), HTTPS(443), prometheus(9090), nodeexporter(9100), grafana(3000)
+  - Update all the packages after connecting to the instance.
+
+   ```bash
+   sudo apt update -y
+   ```
+
+2. **Install Prometheus and Grafana:**
 
    Set up Prometheus and Grafana to monitor your application.
 
    **Installing Prometheus:**
-
-   First, create a dedicated Linux user for Prometheus and download Prometheus:
 
    ```bash
    sudo useradd --system --no-create-home --shell /bin/false prometheus
@@ -454,7 +466,7 @@ sudo systemctl restart jenkins
 
    You can access Prometheus in a web browser using your server's IP and port 9090:
 
-   `http://<your-server-ip>:9090`
+   `http://<elastic-ip>:9090`
 
    **Installing Node Exporter:**
 
@@ -519,13 +531,15 @@ sudo systemctl restart jenkins
 
    You can access Node Exporter metrics in Prometheus.
 
-2. **Configure Prometheus Plugin Integration:**
+3. **Configure Prometheus Plugin Integration:**
 
    Integrate Jenkins with Prometheus to monitor the CI/CD pipeline.
 
    **Prometheus Configuration:**
 
-   To configure Prometheus to scrape metrics from Node Exporter and Jenkins, you need to modify the `prometheus.yml` file. Here is an example `prometheus.yml` configuration for your setup:
+   To configure Prometheus to scrape metrics from Node Exporter and Jenkins, you need to modify the `prometheus.yml` file. Here is an example `prometheus.yml` configuration for your setup -
+
+   Go to cd /etc/prometheus/ and then sudo nano prometheus.yml:
 
    ```yaml
    global:
@@ -544,7 +558,7 @@ sudo systemctl restart jenkins
 
    Make sure to replace `<your-jenkins-ip>` and `<your-jenkins-port>` with the appropriate values for your Jenkins setup.
 
-   Check the validity of the configuration file:
+   Check the validity of the syntax of the configuration file:
 
    ```bash
    promtool check config /etc/prometheus/prometheus.yml
@@ -558,12 +572,12 @@ sudo systemctl restart jenkins
 
    You can access Prometheus targets at:
 
-   `http://<your-prometheus-ip>:9090/targets`
+   `http://<elastic-ip>:9090/targets`
 
 
 ####Grafana
 
-**Install Grafana on Ubuntu 22.04 and Set it up to Work with Prometheus**
+**Install Grafana on the monitoring instance and set it up to work with Prometheus**
 
 **Step 1: Install Dependencies:**
 
@@ -676,17 +690,52 @@ That's it! You've successfully installed and set up Grafana to work with Prometh
 2. **Configure Prometheus Plugin Integration:**
     - Integrate Jenkins with Prometheus to monitor the CI/CD pipeline.
 
+Manage Jenkins → Plugins → Install Prometheus metrics 
 
-**Phase 5: Notification**
+Manage Jenkins → System → Prometheus → Apply
+
+Jenkins Grafana Dashboard code = 9964
+
+# **Phase 5: Notification**
 
 1. **Implement Notification Services:**
     - Set up email notifications in Jenkins or other notification mechanisms.
+
+Gmail → Manage account → Security → Enable 2FA → App passwords
+
+Manage Jenkins → Credentials → Username(email) and Password
+
+Manage Jenkins → System → Email Notification → smtp.gmail.com → SMTP and SSL authentication → SMTP port = 465
+
+Manage Jenkins → System → Extended Email Notification → smtp.gmail.com → SMTP port = 465 → Credential → Default Content type = HTML
+
+Add the below pipeline script:
+ ```groovy
+post{
+    always{
+        emailext attachLog: true,
+            subject: "${currentBuild.result}",
+            body: "Project: ${env.JOB_NAME}<br/>" +
+                    "Build Number: ${env.BUILD_NUMBER}<br/>" +
+                    "URL: ${env.BUILD_URL}<br/>",
+            to: 'youremail@gmail.com'   #enter your mail
+            attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+    }
+}
+ ```
+
 
 # Phase 6: Kubernetes
 
 ## Create Kubernetes Cluster with Nodegroups
 
-In this phase, you'll set up a Kubernetes cluster with node groups. This will provide a scalable environment to deploy and manage your applications.
+Set up a Kubernetes cluster with node groups in AWS. This will provide a scalable environment to deploy and manage your applications.
+Use EKS Cluster role and Node IAM role. 
+
+Then run the following command in the local terminal:
+ ```bash
+aws eks update-kubeconfig --region <your-region> --name <your-cluster-name>```
+ ```
 
 ## Monitor Kubernetes with Prometheus
 
@@ -714,7 +763,7 @@ To begin monitoring your Kubernetes cluster, you'll install the Prometheus Node 
     helm install prometheus-node-exporter prometheus-community/prometheus-node-exporter --namespace prometheus-node-exporter
     ```
 
-Add a Job to Scrape Metrics on nodeip:9001/metrics in prometheus.yml:
+Add a Job to Scrape Metrics on nodeip:9100/metrics in prometheus.yml:
 
 Update your Prometheus configuration (prometheus.yml) to add a new job for scraping metrics from nodeip:9001/metrics. You can do this by adding the following configuration to your prometheus.yml file:
 
@@ -730,29 +779,49 @@ Replace 'your-job-name' with a descriptive name for your job. The static_configs
 
 Don't forget to reload or restart Prometheus to apply these changes to your configuration.
 
-To deploy an application with ArgoCD, you can follow these steps, which I'll outline in Markdown format:
-
 ### Deploy Application with ArgoCD
 
 1. **Install ArgoCD:**
 
    You can install ArgoCD on your Kubernetes cluster by following the instructions provided in the [EKS Workshop](https://archive.eksworkshop.com/intermediate/290_argocd/install/) documentation.
 
+   Expose the ArgoCD Server:
+
+``` bash
+  kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+```
+``` bash
+export ARGOCD_SERVER=`kubectl get svc argocd-server -n argocd -o json | jq --raw-output '.status.loadBalancer.ingress[0].hostname'`
+```
+``` bash
+echo $ARGOCD_SERVER
+```
+This will give the endpoint for ArgoCD.
+
+Username is admin. For Password:
+``` bash
+export ARGO_PWD=`kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d`
+```
+``` bash
+echo $ARGO_PWD
+```
+
 2. **Set Your GitHub Repository as a Source:**
 
    After installing ArgoCD, you need to set up your GitHub repository as a source for your application deployment. This typically involves configuring the connection to your repository and defining the source for your ArgoCD application. The specific steps will depend on your setup and requirements.
 
-3. **Create an ArgoCD Application:**
-   - `name`: Set the name for your application.
-   - `destination`: Define the destination where your application should be deployed.
-   - `project`: Specify the project the application belongs to.
-   - `source`: Set the source of your application, including the GitHub repository URL, revision, and the path to the application within the repository.
-   - `syncPolicy`: Configure the sync policy, including automatic syncing, pruning, and self-healing.
+   Repsitories → Connect repo using HTTPS → Paste git URL
+
+   3. **Create an ArgoCD Application:**
+   New App → Sync Policy = Automatic → Repo URL → Path = Kubernetes → Cluster URL → Namespace = default
+
+   Force sync again.
+
 
 4. **Access your Application**
-   - To Access the app make sure port 30007 is open in your security group and then open a new tab paste your NodeIP:30007, your app should be running.
+   - To Access the app make sure port 30007 is open in your security group and then open a new tab paste your NodeIP:30007, your app should be running. Also add inbound rule for port nodeexporter(9100).
 
 **Phase 7: Cleanup**
 
 1. **Cleanup AWS EC2 Instances:**
-    - Terminate AWS EC2 instances that are no longer needed.
+    - Terminate the node group, load balancer, EKS clustee EC2 instances, and the elastic IPs.
