@@ -16,29 +16,35 @@ pipeline {
         stage('Build') {
             steps {
                 echo '🔨 Building application...'
-                sh '''
-                    python -m pip install --upgrade pip
-                    pip install -r requirements.txt
-                '''
+                dir('jenkins-flask-docker-pipeline') {
+                    sh '''
+                        python3 -m pip install --upgrade pip --break-system-packages
+                        pip install -r requirements.txt --break-system-packages
+                    '''
+                }
             }
         }
         
         stage('Test') {
             steps {
                 echo '🧪 Running tests...'
-                sh '''
-                    pytest test_app.py -v --junit-xml=test-results.xml
-                '''
+                dir('jenkins-flask-docker-pipeline') {
+                    sh '''
+                        python3 -m pytest test_app.py -v --junit-xml=test-results.xml
+                    '''
+                }
             }
         }
         
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Building Docker image...'
-                sh '''
-                    docker build -t ${DOCKER_IMAGE} .
-                    echo "Image built: ${DOCKER_IMAGE}"
-                '''
+                dir('jenkins-flask-docker-pipeline') {
+                    sh '''
+                        docker build -t ${DOCKER_IMAGE} .
+                        echo "Image built: ${DOCKER_IMAGE}"
+                    '''
+                }
             }
         }
     }
@@ -46,7 +52,7 @@ pipeline {
     post {
         always {
             echo '📊 Publishing test results...'
-            junit 'test-results.xml'
+            junit 'jenkins-flask-docker-pipeline/test-results.xml'
         }
         
         success {
