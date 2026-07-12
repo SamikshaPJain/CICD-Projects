@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_IMAGE = "my-app:${BUILD_NUMBER}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Cloning repository...'
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo '🔨 Building application...'
+                sh '''
+                    python -m pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo '🧪 Running tests...'
+                sh '''
+                    pytest test_app.py -v --junit-xml=test-results.xml
+                '''
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo '🐳 Building Docker image...'
+                sh '''
+                    docker build -t ${DOCKER_IMAGE} .
+                    echo "Image built: ${DOCKER_IMAGE}"
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '📊 Publishing test results...'
+            junit 'test-results.xml'
+        }
+        
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        
+        failure {
+            echo '❌ Pipeline failed'
+        }
+    }
+}
